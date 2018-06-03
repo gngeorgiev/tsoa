@@ -29,9 +29,14 @@ export class MetadataGenerator {
         }
       }
 
-      ts.forEachChild(sf, (node) => {
-        this.nodes.push(node);
-      });
+      const iterate = (source: any) => {
+        ts.forEachChild(source, node => {
+          this.nodes.push(node);
+          iterate(node);
+        });
+      };
+
+      iterate(sf);
     });
 
     const controllers = this.buildControllers();
