@@ -37,17 +37,17 @@ var getConfig = function (configPath) {
     }
     catch (err) {
         if (err.code === 'MODULE_NOT_FOUND') {
-            throw Error("No config file found at '" + configPath + "'");
+            throw Error("No config file found at '" + workingDir + "/" + configPath + "'");
         }
         else if (err.name === 'SyntaxError') {
             // tslint:disable-next-line:no-console
             console.error(err);
-            throw Error("Invalid JSON syntax in config at '" + configPath + "': " + err.message);
+            throw Error("Invalid JSON syntax in config at '" + workingDir + "/" + configPath + "': " + err.message);
         }
         else {
             // tslint:disable-next-line:no-console
             console.error(err);
-            throw Error("Unhandled error encountered loading '" + configPath + "': " + err.message);
+            throw Error("Unhandled error encountered loading '" + workingDir + "/" + configPath + "': " + err.message);
         }
     }
     return config;
