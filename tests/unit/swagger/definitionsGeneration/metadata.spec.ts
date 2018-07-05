@@ -19,7 +19,24 @@ describe('Metadata generation', () => {
     const definedMethods = [
       'getMethod', 'postMethod', 'patchMethod', 'putMethod', 'deleteMethod',
       'description', 'tags', 'multiResponse', 'successResponse', 'oauthOrAPIkeySecurity',
-      'apiSecurity', 'oauthSecurity', 'deprecatedMethod', 'summaryMethod', 'returnAnyType'];
+      'apiSecurity', 'oauthSecurity', 'deprecatedMethod', 'summaryMethod', 'returnAnyType', 'errorResponseExample'];
+
+    it('should generate example for response', () => {
+      const method = controller.methods.find(m => m.name === 'errorResponseExample');
+      if (!method) {
+        throw new Error('Method errorResponseExample not defined!');
+      }
+
+      const response = method.responses.find(r => r.description === 'error response');
+      if (!response) {
+        throw new Error('Response not defined');
+      }
+
+      const example = response.examples;
+      expect(example).to.not.equal(null);
+      expect(example.status).to.equal(400);
+      expect(example.message).to.equal('error');
+    });
 
     it('should only generate the defined methods', () => {
       expect(controller.methods.filter(m => definedMethods.indexOf(m.name) === -1).length).to.equal(0);

@@ -110,4 +110,10 @@ export class MethodController extends Controller {
     public async returnAnyType(): Promise<any> {
         return 'Hello Word';
     }
+
+    @Get('errorResponseExample')
+    @Response<ErrorResponseModel>(400, 'error response', {status: 400, message: 'error'})
+    public async errorResponseExample(): Promise<any> {
+        return null;
+    }
 }
