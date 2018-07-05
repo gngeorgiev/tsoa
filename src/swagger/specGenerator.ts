@@ -37,6 +37,7 @@ export class SpecGenerator {
 
       spec = mergeFuncs[this.config.specMerging](spec, this.config.spec);
     }
+    if (this.config.schemes) { spec.schemes = this.config.schemes; }
 
     return spec;
   }
@@ -138,8 +139,6 @@ export class SpecGenerator {
         properties[p.name].default = p.default;
         properties[p.name].description = p.description;
 
-        // if (!properties[p.name].$ref) {
-        // }
         if (p.required) {
           required.push(p.name);
         }
@@ -225,7 +224,9 @@ export class SpecGenerator {
 
     source.forEach(property => {
       const swaggerType = this.getSwaggerType(property.type);
+      const format = property.format as Swagger.DataFormat;
       swaggerType.description = property.description;
+      swaggerType.format = format || swaggerType.format;
       if (!swaggerType.$ref) {
         swaggerType.default = property.default;
 
@@ -237,6 +238,11 @@ export class SpecGenerator {
             swaggerType[key] = property.validators[key].value;
           });
       }
+
+      if (!property.required)  {
+        swaggerType['x-nullable'] = true;
+      }
+
       properties[property.name] = swaggerType as Swagger.Schema;
     });
 
