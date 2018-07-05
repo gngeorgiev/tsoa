@@ -30,7 +30,7 @@ export interface TestModel extends Model {
   optionalString?: string;
   anyType?: any;
   // modelsObjectDirect?: {[key: string]: TestSubModel2;};
-  modelsObjectIndirect?: TestSubModelContainer;
+  modelsObjectIndirect?: TestSubModelContainerTop;
   modelsObjectIndirectNS?: TestSubModelContainerNamespace.TestSubModelContainer;
   modelsObjectIndirectNS2?: TestSubModelContainerNamespace.InnerNamespace.TestSubModelContainer2;
   modelsObjectIndirectNS_Alias?: TestSubModelContainerNamespace_TestSubModelContainer;
@@ -83,7 +83,7 @@ export enum EnumStringValue {
 // alphabetical sorting cleaner
 export type StrLiteral = 'Foo' | 'Bar';
 
-export interface TestSubModelContainer {
+export interface TestSubModelContainerTop {
   [key: string]: TestSubModel2;
 }
 

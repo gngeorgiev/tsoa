@@ -36,7 +36,7 @@ const models: TsoaRoute.Models={
       "dateValue": { "dataType": "datetime" },
       "optionalString": { "dataType": "string" },
       "anyType": { "dataType": "any" },
-      "modelsObjectIndirect": { "ref": "TestSubModelContainer" },
+      "modelsObjectIndirect": { "ref": "TestSubModelContainerTop" },
       "modelsObjectIndirectNS": { "ref": "TestSubModelContainerNamespace.TestSubModelContainer" },
       "modelsObjectIndirectNS2": { "ref": "TestSubModelContainerNamespace.InnerNamespace.TestSubModelContainer2" },
       "modelsObjectIndirectNS_Alias": { "ref": "TestSubModelContainerNamespace_TestSubModelContainer" },
@@ -62,7 +62,7 @@ const models: TsoaRoute.Models={
       "testSubModel2": { "dataType": "boolean", "required": true },
     },
   },
-  "TestSubModelContainer": {
+  "TestSubModelContainerTop": {
     "additionalProperties": { "ref": "TestSubModel2" },
   },
   "TestSubModelNamespace.TestSubModelNS": {

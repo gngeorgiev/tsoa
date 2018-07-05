@@ -46,7 +46,7 @@ const models: TsoaRoute.Models={
       "dateValue": { "dataType": "datetime" },
       "optionalString": { "dataType": "string" },
       "anyType": { "dataType": "any" },
-      "modelsObjectIndirect": { "ref": "TestSubModelContainer" },
+      "modelsObjectIndirect": { "ref": "TestSubModelContainerTop" },
       "modelsObjectIndirectNS": { "ref": "TestSubModelContainerNamespace.TestSubModelContainer" },
       "modelsObjectIndirectNS2": { "ref": "TestSubModelContainerNamespace.InnerNamespace.TestSubModelContainer2" },
       "modelsObjectIndirectNS_Alias": { "ref": "TestSubModelContainerNamespace_TestSubModelContainer" },
@@ -72,7 +72,7 @@ const models: TsoaRoute.Models={
       "testSubModel2": { "dataType": "boolean", "required": true },
     },
   },
-  "TestSubModelContainer": {
+  "TestSubModelContainerTop": {
     "additionalProperties": { "ref": "TestSubModel2" },
   },
   "TestSubModelNamespace.TestSubModelNS": {
@@ -1596,7 +1596,7 @@ export function RegisterRoutes(router: any) {
   router.get('/v1/ParameterTest/paramaterImplicitDate',
     async (context, next) => {
       const args={
-        date: { "default": "2018-01-15", "in": "query", "name": "date", "dataType": "date", "validators": { "isDate": { "errorMsg": "date" } } },
+        date: { "default": "2018-01-14", "in": "query", "name": "date", "dataType": "date", "validators": { "isDate": { "errorMsg": "date" } } },
       };
 
       let validatedArgs: any[]=[];
