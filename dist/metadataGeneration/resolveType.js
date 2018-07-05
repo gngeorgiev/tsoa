@@ -491,6 +491,7 @@ function getModelProperties(node, genericTypes) {
             }
             return {
                 description: getNodeDescription(propertyDeclaration),
+                format: getNodeFormat(propertyDeclaration),
                 name: identifier.text,
                 required: !propertyDeclaration.questionToken,
                 type: resolveType(aType, aType.parent),
@@ -553,6 +554,7 @@ function getModelProperties(node, genericTypes) {
         return {
             default: getInitializerValue(property.initializer, type),
             description: getNodeDescription(property),
+            format: getNodeFormat(property),
             name: identifier.text,
             required: !property.questionToken && !property.initializer,
             type: type,
@@ -624,5 +626,8 @@ function getNodeDescription(node) {
         return ts.displayPartsToString(comments);
     }
     return undefined;
+}
+function getNodeFormat(node) {
+    return jsDocUtils_1.getJSDocComment(node, 'format');
 }
 //# sourceMappingURL=resolveType.js.map

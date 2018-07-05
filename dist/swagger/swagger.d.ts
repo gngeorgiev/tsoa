@@ -22,9 +22,9 @@ export declare namespace Swagger {
         responses?: {
             [name: string]: Response;
         };
-        security?: Secuirty[];
+        security?: Security[];
         securityDefinitions?: {
-            [name: string]: Secuirty;
+            [name: string]: Security;
         };
         tags?: Tag[];
         externalDocs?: ExternalDocs;
@@ -111,7 +111,7 @@ export declare namespace Swagger {
         };
         schemes?: Protocol[];
         deprecated?: boolean;
-        security?: Secuirty[];
+        security?: Security[];
     }
     interface Response {
         description: string;
@@ -214,5 +214,5 @@ export declare namespace Swagger {
     interface OAuthScope {
         [name: string]: string;
     }
-    type Secuirty = BasicSecurity | ApiKeySecurity | OAuth2AccessCodeSecurity | OAuth2ApplicationSecurity | OAuth2ImplicitSecurity | OAuth2PasswordSecurity;
+    type Security = BasicSecurity | ApiKeySecurity | OAuth2AccessCodeSecurity | OAuth2ApplicationSecurity | OAuth2ImplicitSecurity | OAuth2PasswordSecurity;
 }

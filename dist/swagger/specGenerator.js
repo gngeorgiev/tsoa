@@ -44,6 +44,9 @@ var SpecGenerator = /** @class */ (function () {
             };
             spec = mergeFuncs[this.config.specMerging](spec, this.config.spec);
         }
+        if (this.config.schemes) {
+            spec.schemes = this.config.schemes;
+        }
         return spec;
     };
     SpecGenerator.prototype.buildDefinitions = function () {
@@ -132,8 +135,6 @@ var SpecGenerator = /** @class */ (function () {
             properties[p.name] = _this.getSwaggerType(p.type);
             properties[p.name].default = p.default;
             properties[p.name].description = p.description;
-            // if (!properties[p.name].$ref) {
-            // }
             if (p.required) {
                 required.push(p.name);
             }
@@ -214,7 +215,9 @@ var SpecGenerator = /** @class */ (function () {
         var properties = {};
         source.forEach(function (property) {
             var swaggerType = _this.getSwaggerType(property.type);
+            var format = property.format;
             swaggerType.description = property.description;
+            swaggerType.format = format || swaggerType.format;
             if (!swaggerType.$ref) {
                 swaggerType.default = property.default;
                 Object.keys(property.validators)
@@ -224,6 +227,9 @@ var SpecGenerator = /** @class */ (function () {
                     .forEach(function (key) {
                     swaggerType[key] = property.validators[key].value;
                 });
+            }
+            if (!property.required) {
+                swaggerType['x-nullable'] = true;
             }
             properties[property.name] = swaggerType;
         });

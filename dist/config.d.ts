@@ -31,7 +31,7 @@ export interface SwaggerConfig {
      */
     entryFile: string;
     /**
-     * API host, expressTemplate.g. localhost:3000 or https://myapi.com
+     * API host, expressTemplate.g. localhost:3000 or myapi.com
      */
     host?: string;
     /**
@@ -75,9 +75,10 @@ export interface SwaggerConfig {
      * and only serves to provide the relevant details for each scheme.
      */
     securityDefinitions?: {
-        [name: string]: Swagger.Secuirty;
+        [name: string]: Swagger.Security;
     };
     yaml?: boolean;
+    schemes?: Swagger.Protocol[];
 }
 export interface RoutesConfig {
     /**

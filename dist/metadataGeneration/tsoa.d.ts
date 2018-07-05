@@ -52,6 +52,7 @@ export declare namespace Tsoa {
     interface Property {
         default?: any;
         description?: string;
+        format?: string;
         name: string;
         type: Type;
         required: boolean;
