@@ -20,4 +20,8 @@ function Delete(value) {
     return function () { return; };
 }
 exports.Delete = Delete;
+function Head(value) {
+    return function () { return; };
+}
+exports.Head = Head;
 //# sourceMappingURL=methods.js.map

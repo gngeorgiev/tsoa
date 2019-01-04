@@ -4,9 +4,11 @@ var ts = require("typescript");
 var decoratorUtils_1 = require("./../utils/decoratorUtils");
 var exceptions_1 = require("./exceptions");
 var methodGenerator_1 = require("./methodGenerator");
+var security_1 = require("./security");
 var ControllerGenerator = /** @class */ (function () {
-    function ControllerGenerator(node) {
+    function ControllerGenerator(node, current) {
         this.node = node;
+        this.current = current;
         this.path = this.getPath();
         this.tags = this.getTags();
         this.security = this.getSecurity();
@@ -33,7 +35,7 @@ var ControllerGenerator = /** @class */ (function () {
         var _this = this;
         return this.node.members
             .filter(function (m) { return m.kind === ts.SyntaxKind.MethodDeclaration; })
-            .map(function (m) { return new methodGenerator_1.MethodGenerator(m, _this.tags, _this.security); })
+            .map(function (m) { return new methodGenerator_1.MethodGenerator(m, _this.current, _this.tags, _this.security); })
             .filter(function (generator) { return generator.IsValid(); })
             .map(function (generator) { return generator.Generate(); });
     };
@@ -67,16 +69,7 @@ var ControllerGenerator = /** @class */ (function () {
         if (!securityDecorators || !securityDecorators.length) {
             return [];
         }
-        var security = [];
-        for (var _i = 0, securityDecorators_1 = securityDecorators; _i < securityDecorators_1.length; _i++) {
-            var sec = securityDecorators_1[_i];
-            var expression = sec.parent;
-            security.push({
-                name: expression.arguments[0].text,
-                scopes: expression.arguments[1] ? expression.arguments[1].elements.map(function (e) { return e.text; }) : undefined,
-            });
-        }
-        return security;
+        return security_1.getSecurities(securityDecorators);
     };
     return ControllerGenerator;
 }());

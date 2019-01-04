@@ -12,7 +12,7 @@ export declare namespace Tsoa {
     interface Method {
         deprecated?: boolean;
         description?: string;
-        method: 'get' | 'post' | 'put' | 'delete' | 'options' | 'head' | 'patch';
+        method: 'get' | 'post' | 'put' | 'delete' | 'options' | 'head' | 'patch' | 'head';
         name: string;
         parameters: Parameter[];
         path: string;
@@ -22,6 +22,7 @@ export declare namespace Tsoa {
         security: Security[];
         summary?: string;
         isHidden: boolean;
+        operationId?: string;
     }
     interface Parameter {
         parameterName: string;
@@ -33,6 +34,10 @@ export declare namespace Tsoa {
         default?: any;
         validators: Validators;
     }
+    interface ArrayParameter extends Parameter {
+        type: ArrayType;
+        collectionFormat?: 'csv' | 'multi' | 'pipes' | 'ssv' | 'tsv';
+    }
     interface Validators {
         [key: string]: {
             value?: any;
@@ -40,8 +45,7 @@ export declare namespace Tsoa {
         };
     }
     interface Security {
-        name: string;
-        scopes?: string[];
+        [key: string]: string[];
     }
     interface Response {
         description: string;
@@ -76,6 +80,7 @@ export declare namespace Tsoa {
         properties?: Property[];
         additionalProperties?: Type;
         enums?: string[];
+        example?: any;
     }
     interface ReferenceTypeMap {
         [refName: string]: Tsoa.ReferenceType;

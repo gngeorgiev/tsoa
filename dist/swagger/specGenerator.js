@@ -8,7 +8,7 @@ var SpecGenerator = /** @class */ (function () {
     }
     SpecGenerator.prototype.GetSpec = function () {
         var spec = {
-            basePath: pathUtils_1.normalisePath(this.config.basePath, '/'),
+            basePath: pathUtils_1.normalisePath(this.config.basePath, '/', undefined, false),
             consumes: ['application/json'],
             definitions: this.buildDefinitions(),
             info: {
@@ -35,6 +35,9 @@ var SpecGenerator = /** @class */ (function () {
         }
         if (this.config.license) {
             spec.info.license = { name: this.config.license };
+        }
+        if (this.config.tags) {
+            spec.tags = this.config.tags;
         }
         if (this.config.spec) {
             this.config.specMerging = this.config.specMerging || 'immediate';
@@ -65,6 +68,9 @@ var SpecGenerator = /** @class */ (function () {
                 };
                 if (referenceType.additionalProperties) {
                     definitions[referenceType.refName].additionalProperties = _this.buildAdditionalProperties(referenceType.additionalProperties);
+                }
+                if (referenceType.example) {
+                    definitions[referenceType.refName].example = referenceType.example;
                 }
             }
             // Enum definition
@@ -99,18 +105,13 @@ var SpecGenerator = /** @class */ (function () {
         pathMethod.description = method.description;
         pathMethod.summary = method.summary;
         pathMethod.tags = method.tags;
+        // Use operationId tag otherwise fallback to generated. Warning: This doesn't check uniqueness.
+        pathMethod.operationId = method.operationId || pathMethod.operationId;
         if (method.deprecated) {
             pathMethod.deprecated = method.deprecated;
         }
         if (method.security) {
-            var methodSecurity = [];
-            for (var _i = 0, _a = method.security; _i < _a.length; _i++) {
-                var thisSecurity = _a[_i];
-                var security = {};
-                security[thisSecurity.name] = thisSecurity.scopes ? thisSecurity.scopes : [];
-                methodSecurity.push(security);
-            }
-            pathMethod.security = methodSecurity;
+            pathMethod.security = method.security;
         }
         pathMethod.parameters = method.parameters
             .filter(function (p) {
@@ -166,7 +167,7 @@ var SpecGenerator = /** @class */ (function () {
         };
         var parameterType = this.getSwaggerType(source.type);
         parameter.format = parameterType.format || undefined;
-        if (parameter.in === 'query' && parameter.type === 'array') {
+        if (parameter.in === 'query' && parameterType.type === 'array') {
             parameter.collectionFormat = 'multi';
         }
         if (parameterType.$ref) {

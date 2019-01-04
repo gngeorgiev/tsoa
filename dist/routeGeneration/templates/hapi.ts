@@ -1,9 +1,9 @@
 // TODO: Replace this with HAPI middleware stuff
 /* tslint:disable */
 {{#if canImportByAlias}}
-  import { Controller, ValidateParam, FieldErrors, ValidateError, TsoaRoute } from 'tsoa';
+  import { Controller, ValidationService, FieldErrors, ValidateError, TsoaRoute } from 'tsoa';
 {{else}}
-  import { Controller, ValidateParam, FieldErrors, ValidateError, TsoaRoute } from '../../../src';
+  import { Controller, ValidationService, FieldErrors, ValidateError, TsoaRoute } from '../../../src';
 {{/if}}
 {{#if iocModule}}
 import { iocContainer } from '{{iocModule}}';
@@ -34,6 +34,7 @@ const models: TsoaRoute.Models = {
     },
     {{/each}}
 };
+const validationService = new ValidationService(models);
 
 export function RegisterRoutes(server: any) {
     {{#each controllers}}
@@ -41,15 +42,16 @@ export function RegisterRoutes(server: any) {
         server.route({
             method: '{{method}}',
             path: '{{fullPath}}',
-            config: {
+            options: {
                 {{#if security.length}}
                 pre: [
                     {
-                      method: authenticateMiddleware({{json security}})
+                      method: authenticateMiddleware({{json security}}),
+                      assign: "user"
                     }
                 ],
                 {{/if}}
-                handler: (request: any, reply: any) => {
+                handler: (request: any, h: any) => {
                     const args = {
                         {{#each parameters}}
                             {{@key}}: {{{json this}}},
@@ -60,7 +62,9 @@ export function RegisterRoutes(server: any) {
                     try {
                         validatedArgs = getValidatedArgs(args, request);
                     } catch (err) {
-                        return reply(err).code(err.status || 500);
+                        return h
+                            .response(err)
+                            .code(err.status || 500);
                     }
 
                     {{#if ../../iocModule}}
@@ -69,8 +73,8 @@ export function RegisterRoutes(server: any) {
                     const controller = new {{../name}}();
                     {{/if}}
 
-                    const promise = controller.{{name}}.apply(controller, validatedArgs);
-                    return promiseHandler(controller, promise, request, reply);
+                    const promise = controller.{{name}}.apply(controller, validatedArgs as any);
+                    return promiseHandler(controller, promise, request, h);
                 }
             }
         });
@@ -79,50 +83,76 @@ export function RegisterRoutes(server: any) {
 
     {{#if useSecurity}}
     function authenticateMiddleware(security: TsoaRoute.Security[] = []) {
-        return (request: any, reply: any) => {
+        return (request: any, h: any) => {
             let responded = 0;
             let success = false;
-            for (const secMethod of security) {
-                hapiAuthentication(request, secMethod.name, secMethod.scopes).then((user: any) => {
-                    // only need to respond once
-                    if (!success) {
-                        success = true;
-                        responded++;
-                        request['user'] = user;
-                        reply.continue();
-                    }
-                })
-                .catch((error: any) => {
+
+            const succeed = function(user: any) {
+                if (!success) {
+                    success = true;
                     responded++;
-                    if (responded == security.length && !success) {
-                        reply(error).code(error.status || 401);
+                    request['user'] = user;
+                }
+                return user;
+            };
+
+            const fail = function(error: any) {
+                responded++;
+                if (responded == security.length && !success) {
+                    h.response(error).code(error.status || 401);
+                }
+                return error;
+            };
+
+            for (const secMethod of security) {
+                if (Object.keys(secMethod).length > 1) {
+                    let promises: Promise<any>[] = [];
+
+                    for (const name in secMethod) {
+                        promises.push(hapiAuthentication(request, name, secMethod[name]));
                     }
-                })
+
+                    return Promise.all(promises)
+                        .then((users) => { succeed(users[0]); })
+                        .catch(fail);
+                } else {
+                    for (const name in secMethod) {
+                        return hapiAuthentication(request, name, secMethod[name])
+                            .then(succeed)
+                            .catch(fail);
+                    }
+                }
             }
+            return null;
         }
     }
     {{/if}}
 
-    function promiseHandler(controllerObj: any, promise: any, request: any, reply: any) {
+    function isController(object: any): object is Controller {
+        return 'getHeaders' in object && 'getStatus' in object && 'setStatus' in object;
+    }
+
+    function promiseHandler(controllerObj: any, promise: any, request: any, h: any) {
         return Promise.resolve(promise)
             .then((data: any) => {
-                const response = (data || data === false) ? reply(data).code(200) : reply("").code(204);
+                const response = (data || data === false)
+                    ? h.response(data).code(200)
+                    : h.response("").code(204);
 
-                if (controllerObj instanceof Controller) {
-                    const controller = controllerObj as Controller
-                    const headers = controller.getHeaders();
+                if (isController(controllerObj)) {
+                    const headers = controllerObj.getHeaders();
                     Object.keys(headers).forEach((name: string) => {
                         response.header(name, headers[name]);
                     });
 
-                    const statusCode = controller.getStatus();
+                    const statusCode = controllerObj.getStatus();
                     if (statusCode) {
                         response.code(statusCode);
                     }
                 }
                 return response;
             })
-            .catch((error: any) => reply(error).code(error.status || 500));
+            .catch((error: any) => h.response(error).code(error.status || 500));
     }
 
     function getValidatedArgs(args: any, request: any): any[] {
@@ -133,15 +163,15 @@ export function RegisterRoutes(server: any) {
             case 'request':
                 return request;
             case 'query':
-                return ValidateParam(args[key], request.query[name], models, name, errorFields)
+                return validationService.ValidateParam(args[key], request.query[name], name, errorFields)
             case 'path':
-                return ValidateParam(args[key], request.params[name], models, name, errorFields)
+                return validationService.ValidateParam(args[key], request.params[name], name, errorFields)
             case 'header':
-                return ValidateParam(args[key], request.headers[name], models, name, errorFields);
+                return validationService.ValidateParam(args[key], request.headers[name], name, errorFields);
             case 'body':
-                return ValidateParam(args[key], request.payload, models, name, errorFields, name + '.');
+                return validationService.ValidateParam(args[key], request.payload, name, errorFields, name + '.');
              case 'body-prop':
-                return ValidateParam(args[key], request.payload[name], models, name, errorFields, 'body.');
+                return validationService.ValidateParam(args[key], request.payload[name], name, errorFields, 'body.');
             }
         });
         if (Object.keys(errorFields).length > 0) {

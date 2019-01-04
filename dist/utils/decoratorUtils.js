@@ -1,14 +1,18 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-var resolveType_1 = require("./../metadataGeneration/resolveType");
+var initializer_value_1 = require("../metadataGeneration/initializer-value");
 function getDecorators(node, isMatching) {
     var decorators = node.decorators;
     if (!decorators || !decorators.length) {
         return [];
     }
     return decorators
-        .map(function (d) { return d.expression; })
-        .map(function (e) { return e.expression; })
+        .map(function (e) {
+        while (e.expression !== undefined) {
+            e = e.expression;
+        }
+        return e;
+    })
         .filter(isMatching);
 }
 exports.getDecorators = getDecorators;
@@ -43,7 +47,7 @@ function getDecoratorOptionValue(node, isMatching) {
     if (!expArguments || !expArguments.length) {
         return;
     }
-    return resolveType_1.getInitializerValue(expArguments[0]);
+    return initializer_value_1.getInitializerValue(expArguments[0]);
 }
 exports.getDecoratorOptionValue = getDecoratorOptionValue;
 function isDecorator(node, isMatching) {

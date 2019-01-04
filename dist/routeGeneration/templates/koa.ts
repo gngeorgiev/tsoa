@@ -1,8 +1,8 @@
 /* tslint:disable */
 {{#if canImportByAlias}}
-  import { Controller, ValidateParam, FieldErrors, ValidateError, TsoaRoute } from 'tsoa';
+  import { Controller, ValidationService, FieldErrors, ValidateError, TsoaRoute } from 'tsoa';
 {{else}}
-  import { Controller, ValidateParam, FieldErrors, ValidateError, TsoaRoute } from '../../../src';
+  import { Controller, ValidationService, FieldErrors, ValidateError, TsoaRoute } from '../../../src';
 {{/if}}
 {{#if iocModule}}
 import { iocContainer } from '{{iocModule}}';
@@ -13,6 +13,7 @@ import { {{name}} } from '{{modulePath}}';
 {{#if authenticationModule}}
 import { koaAuthentication } from '{{authenticationModule}}';
 {{/if}}
+import * as KoaRouter from 'koa-router';
 
 const models: TsoaRoute.Models = {
     {{#each models}}
@@ -33,8 +34,9 @@ const models: TsoaRoute.Models = {
     },
     {{/each}}
 };
+const validationService = new ValidationService(models);
 
-export function RegisterRoutes(router: any) {
+export function RegisterRoutes(router: KoaRouter) {
     {{#each controllers}}
     {{#each actions}}
         router.{{method}}('{{fullPath}}',
@@ -52,8 +54,8 @@ export function RegisterRoutes(router: any) {
             try {
               validatedArgs = getValidatedArgs(args, context);
             } catch (error) {
-              context.status = error.status || 500;
-              context.body = error;
+              context.status = error.status;
+              context.throw(error.status, JSON.stringify({ fields: error.fields }));
               return next();
             }
 
@@ -63,7 +65,7 @@ export function RegisterRoutes(router: any) {
             const controller = new {{../name}}();
             {{/if}}
 
-            const promise = controller.{{name}}.apply(controller, validatedArgs);
+            const promise = controller.{{name}}.apply(controller, validatedArgs as any);
             return promiseHandler(controller, promise, context, next);
         });
     {{/each}}
@@ -71,31 +73,54 @@ export function RegisterRoutes(router: any) {
 
   {{#if useSecurity}}
   function authenticateMiddleware(security: TsoaRoute.Security[] = []) {
-    return (context: any, next: any) => {
-        let responded = 0;
-        let success = false;
-        for (const secMethod of security) {
-            koaAuthentication(context.request, secMethod.name, secMethod.scopes).then((user: any) => {
-                // only need to respond once
-                if (!success) {
-                    success = true;
-                    responded++;
-                    context.request['user'] = user;
-                    next();
-                }
-            })
-            .catch((error: any) => {
-                responded++;
-                if (responded == security.length && !success) {
-                    context.status = error.status || 401;
-                    context.body = error;
-                    next();
-                }
-            })
-        }
-    }
+      return async (context: any, next: any) => {
+          let responded = 0;
+          let success = false;
+
+          const succeed = async (user: any) => {
+              if (!success) {
+                  success = true;
+                  responded++;
+                  context.request['user'] = user;
+                  await next();
+              }
+          };
+
+          const fail = async (error: any) => {
+              responded++;
+              if (responded == security.length && !success) {
+                  context.status = error.status || 401;
+                  context.throw(context.status, error.message, error);
+                  await next();
+              }
+          };
+
+          for (const secMethod of security) {
+              if (Object.keys(secMethod).length > 1) {
+                  let promises: Promise<any>[] = [];
+
+                  for (const name in secMethod) {
+                      promises.push(koaAuthentication(context.request, name, secMethod[name]));
+                  }
+
+                  return Promise.all(promises)
+                      .then((users) => { succeed(users[0]); })
+                      .catch(fail);
+              } else {
+                  for (const name in secMethod) {
+                      return koaAuthentication(context.request, name, secMethod[name])
+                          .then(succeed)
+                          .catch(fail);
+                  }
+              }
+          }
+      }
   }
   {{/if}}
+
+  function isController(object: any): object is Controller {
+      return 'getHeaders' in object && 'getStatus' in object && 'setStatus' in object;
+  }
 
   function promiseHandler(controllerObj: any, promise: Promise<any>, context: any, next: () => Promise<any>) {
       return Promise.resolve(promise)
@@ -107,24 +132,23 @@ export function RegisterRoutes(router: any) {
                 context.status = 204;
             }
 
-            if (controllerObj instanceof Controller) {
-                const controller = controllerObj as Controller
-                const headers = controller.getHeaders();
+            if (isController(controllerObj)) {
+                const headers = controllerObj.getHeaders();
                 Object.keys(headers).forEach((name: string) => {
                     context.set(name, headers[name]);
                 });
 
-                const statusCode = controller.getStatus();
+                const statusCode = controllerObj.getStatus();
                 if (statusCode) {
                     context.status = statusCode;
                 }
             }
-            next();
+            return next();
         })
         .catch((error: any) => {
-            context.status = error.status || 500;
-            context.body = error;
-            next();
+            context.status = error.status;
+            context.throw(error.status, error.message, error);
+            return next();
         });
     }
 
@@ -136,15 +160,15 @@ export function RegisterRoutes(router: any) {
             case 'request':
                 return context.request;
             case 'query':
-                return ValidateParam(args[key], context.request.query[name], models, name, errorFields)
+                return validationService.ValidateParam(args[key], context.request.query[name], name, errorFields);
             case 'path':
-                return ValidateParam(args[key], context.params[name], models, name, errorFields)
+                return validationService.ValidateParam(args[key], context.params[name], name, errorFields);
             case 'header':
-                return ValidateParam(args[key], context.request.headers[name], models, name, errorFields);
+                return validationService.ValidateParam(args[key], context.request.headers[name], name, errorFields);
             case 'body':
-                return ValidateParam(args[key], context.request.body, models, name, errorFields, name + '.');
+                return validationService.ValidateParam(args[key], context.request.body, name, errorFields, name + '.');
             case 'body-prop':
-                return ValidateParam(args[key], context.request.body[name], models, name, errorFields, 'body.');
+                return validationService.ValidateParam(args[key], context.request.body[name], name, errorFields, 'body.');
             }
         });
         if (Object.keys(errorFields).length > 0) {

@@ -77,6 +77,10 @@ export interface SwaggerConfig {
     securityDefinitions?: {
         [name: string]: Swagger.Security;
     };
+    /**
+     * Swagger Tags Information for your API
+     */
+    tags?: Swagger.Tag[];
     yaml?: boolean;
     schemes?: Swagger.Protocol[];
 }

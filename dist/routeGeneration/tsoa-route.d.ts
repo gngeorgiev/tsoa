@@ -25,7 +25,6 @@ export declare namespace TsoaRoute {
         in: string;
     }
     interface Security {
-        name: string;
-        scopes?: string[];
+        [key: string]: string[];
     }
 }
