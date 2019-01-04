@@ -62,35 +62,36 @@ export function RegisterRoutes(app: any) {
             {{/if}}
 
 
-            const promise = controller.{{name}}.apply(controller, validatedArgs);
+            const promise = controller.{{name}}.apply(controller, validatedArgs as any);
             promiseHandler(controller, promise, response, next);
         });
     {{/each}}
     {{/each}}
 
     {{#if useSecurity}}
-    function authenticateMiddleware(security: TsoaRoute.Security[] = []) {
-        return (request: any, response: any, next: any) => {
+    function authenticateMiddleware(securities: TsoaRoute.Security[] = []) {
+        return (request: any, _response: any, next: any) => {
             let responded = 0;
             let success = false;
-            for (const secMethod of security) {
-                expressAuthentication(request, secMethod.name, secMethod.scopes).then((user: any) => {
-                    // only need to respond once
-                    if (!success) {
-                        success = true;
-                        responded++;
-                        request['user'] = user;
-                        next();
-                    }
-                })
-                .catch((error: any) => {
+            Object.keys(securities)
+              .forEach(name => {
+                expressAuthentication(request, name, securities[name]).then((user: any) => {
+                  // only need to respond once
+                  if (!success) {
+                    success=true;
                     responded++;
-                    if (responded == security.length && !success) {
-                        response.status(401);
-                        next(error)
-                    }
+                    request['user']=user;
+                    next();
+                  }
                 })
-            }
+                  .catch((error: any) => {
+                    responded++;
+                    if (responded==securities.length&&!success) {
+                      _response.status(401);
+                      next(error)
+                    }
+                  })
+              })
         }
     }
     {{/if}}

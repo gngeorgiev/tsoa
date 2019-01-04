@@ -8,7 +8,7 @@ export class SpecGenerator {
 
   public GetSpec() {
     let spec: Swagger.Spec = {
-      basePath: normalisePath(this.config.basePath as string, '/'),
+      basePath: normalisePath(this.config.basePath as string, '/', undefined, false),
       consumes: ['application/json'],
       definitions: this.buildDefinitions(),
       info: {
@@ -28,6 +28,7 @@ export class SpecGenerator {
     if (this.config.host) { spec.host = this.config.host; }
     if (this.config.description) { spec.info.description = this.config.description; }
     if (this.config.license) { spec.info.license = { name: this.config.license }; }
+    if (this.config.tags) { spec.tags = this.config.tags; }
     if (this.config.spec) {
       this.config.specMerging = this.config.specMerging || 'immediate';
       const mergeFuncs: { [key: string]: any } = {
@@ -59,6 +60,10 @@ export class SpecGenerator {
 
         if (referenceType.additionalProperties) {
           definitions[referenceType.refName].additionalProperties = this.buildAdditionalProperties(referenceType.additionalProperties);
+        }
+
+        if (referenceType.example) {
+          definitions[referenceType.refName].example = referenceType.example;
         }
       }
 
@@ -98,19 +103,15 @@ export class SpecGenerator {
     pathMethod.summary = method.summary;
     pathMethod.tags = method.tags;
 
+    // Use operationId tag otherwise fallback to generated. Warning: This doesn't check uniqueness.
+    pathMethod.operationId = method.operationId || pathMethod.operationId;
+
     if (method.deprecated) {
       pathMethod.deprecated = method.deprecated;
     }
+
     if (method.security) {
-
-      const methodSecurity: any[] = [];
-      for (const thisSecurity of method.security) {
-        const security: any = {};
-        security[thisSecurity.name] = thisSecurity.scopes ? thisSecurity.scopes : [];
-        methodSecurity.push(security);
-      }
-
-      pathMethod.security = methodSecurity;
+      pathMethod.security = method.security as any[];
     }
 
     pathMethod.parameters = method.parameters
@@ -173,7 +174,7 @@ export class SpecGenerator {
     const parameterType = this.getSwaggerType(source.type);
     parameter.format = parameterType.format || undefined;
 
-    if (parameter.in === 'query' && parameter.type === 'array') {
+    if (parameter.in === 'query' && parameterType.type === 'array') {
       (parameter as Swagger.QueryParameter).collectionFormat = 'multi';
     }
 
@@ -239,7 +240,7 @@ export class SpecGenerator {
           });
       }
 
-      if (!property.required)  {
+      if (!property.required) {
         swaggerType['x-nullable'] = true;
       }
 

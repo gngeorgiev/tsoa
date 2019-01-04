@@ -1,6 +1,25 @@
 /**
  * This is a description of a model
  * @tsoaModel
+ * @example
+ * {
+ *   "boolArray": [true, false],
+ *   "boolValue": true,
+ *   "dateValue": "2018-06-25T15:45:00Z",
+ *   "id": 2,
+ *   "modelValue": {
+ *     "id": 3,
+ *     "email": "test(at)example.com"
+ *   },
+ *   "modelsArray": [],
+ *   "numberArray": [1, 2, 3],
+ *   "numberValue": 1,
+ *   "optionalString": "optional string",
+ *   "strLiteralArr": ["Foo", "Bar"],
+ *   "strLiteralVal": "Foo",
+ *   "stringArray": ["string one", "string two"],
+ *   "stringValue": "a string"
+ * }
  */
 export interface TestModel extends Model {
   /**
@@ -13,6 +32,9 @@ export interface TestModel extends Model {
    */
   stringValue: string;
   stringArray: string[];
+  /**
+   * @default true
+   */
   boolValue: boolean;
   boolArray: boolean[];
   enumValue?: EnumIndexValue;
@@ -148,6 +170,7 @@ export class ParameterTestModel {
   public weight: number;
   public human: boolean;
   public gender: Gender;
+  public nicknames?: string[];
 }
 
 export class ValidateCustomErrorModel {
@@ -226,6 +249,14 @@ export class ValidateModel {
    * @ignore
    */
   public ignoredProperty: string;
+}
+
+export interface ValidateMapStringToNumber {
+  [key: string]: number;
+}
+
+export interface ValidateMapStringToAny {
+  [key: string]: any;
 }
 
 /**

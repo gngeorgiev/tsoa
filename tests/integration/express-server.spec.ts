@@ -3,7 +3,7 @@ import 'mocha';
 import * as request from 'supertest';
 import { base64image } from '../fixtures/base64image';
 import { app } from '../fixtures/express/server';
-import { Gender, GenericModel, GenericRequest, ParameterTestModel, TestClassModel, TestModel, UserResponseModel, ValidateModel } from '../fixtures/testModel';
+import { Gender, GenericModel, GenericRequest, ParameterTestModel, TestClassModel, TestModel, UserResponseModel, ValidateMapStringToAny, ValidateMapStringToNumber, ValidateModel } from '../fixtures/testModel';
 
 const basePath = '/v1';
 
@@ -109,6 +109,12 @@ describe('Express Server', () => {
       const model = res.body as TestModel;
       expect(model).to.deep.equal(model);
     });
+  });
+
+  it('correctly returns status code', () => {
+    const data = getFakeModel();
+    const path = basePath + '/PostTest/WithDifferentReturnCode';
+    return verifyPostRequest(path, data, (err, res) => { return; }, 201);
   });
 
   it('parses class model as body parameter', () => {
@@ -470,27 +476,121 @@ describe('Express Server', () => {
       }, 400);
     });
 
-  });
-
-  describe('Security', () => {
-    it('can handle get request with access_token user id == 1', () => {
-      return verifyGetRequest(basePath + '/SecurityTest?access_token=abc123456', (err, res) => {
-        const model = res.body as UserResponseModel;
-        expect(model.id).to.equal(1);
+    it('should validate string-to-number dictionary body', () => {
+      const data: ValidateMapStringToNumber = {
+        key1: 0,
+        key2: 1,
+        key3: -1,
+      };
+      return verifyPostRequest(basePath + '/Validate/map', data, (err, res) => {
+        const response = res.body as number[];
+        expect(response.sort()).to.eql([-1, 0, 1]);
       });
     });
 
-    it('can handle get request with access_token user id == 2', () => {
-      return verifyGetRequest(basePath + '/SecurityTest?access_token=xyz123456', (err, res) => {
-        const model = res.body as UserResponseModel;
-        expect(model.id).to.equal(2);
+    it('should reject string-to-string dictionary body', () => {
+      const data: object = {
+        key1: 'val0',
+        key2: 'val1',
+        key3: '-val1',
+      };
+      return verifyPostRequest(basePath + '/Validate/map', data, (err, res) => {
+        const body = JSON.parse(err.text);
+        expect(body.fields['map..key1'].message).to.eql('No matching model found in additionalProperties to validate key1');
+      }, 400);
+    });
+
+    it('should validate string-to-any dictionary body', () => {
+      const data: ValidateMapStringToAny = {
+        key1: '0',
+        key2: 1,
+        key3: -1,
+      };
+      return verifyPostRequest(basePath + '/Validate/mapAny', data, (err, res) => {
+        const response = res.body as any[];
+        expect(response.sort()).to.eql([-1, '0', 1]);
+      });
+    });
+
+    it('should validate string-to-any dictionary body with falsy values', () => {
+      const data: ValidateMapStringToAny = {
+        array: [],
+        false: false,
+        null: null,
+        string: '',
+        zero: 0,
+      };
+      return verifyPostRequest(basePath + '/Validate/mapAny', data, (err, res) => {
+        const response = res.body as any[];
+        expect(response.sort()).to.eql([ [], '', 0, false, null ]);
+      });
+    });
+
+  });
+
+  describe('Security', () => {
+    const emptyHandler = (err, res) => {
+      // This is an empty handler
+    };
+
+    describe('Only API key', () => {
+      it('returns the correct user for user id 1', () => {
+        return verifyGetRequest(basePath + '/SecurityTest?access_token=abc123456', (err, res) => {
+          const model = res.body as UserResponseModel;
+          expect(model.id).to.equal(1);
+        });
+      });
+
+      it('returns the correct user for user id 2', () => {
+        return verifyGetRequest(basePath + '/SecurityTest?access_token=xyz123456', (err, res) => {
+          const model = res.body as UserResponseModel;
+          expect(model.id).to.equal(2);
+        });
+      });
+
+      it('returns 401 for an invalid key', () => {
+        return verifyGetRequest(basePath + '/SecurityTest?access_token=invalid', emptyHandler, 401);
+      });
+    });
+
+    describe('API key or tsoa auth', () => {
+      it('returns 200 if the API key is correct', () => {
+        const path = '/SecurityTest/OauthOrAPIkey?access_token=abc123456&tsoa=invalid';
+        return verifyGetRequest(basePath + path, emptyHandler, 200);
+      });
+
+      it('returns 200 if tsoa auth is correct', () => {
+        const path = '/SecurityTest/OauthOrAPIkey?access_token=invalid&tsoa=abc123456';
+        return verifyGetRequest(basePath + path, emptyHandler, 200);
+      });
+
+      it('returns 401 if neither API key nor tsoa auth are correct', () => {
+        const path = '/SecurityTest/OauthOrAPIkey?access_token=invalid&tsoa=invalid';
+        return verifyGetRequest(basePath + path, emptyHandler, 401);
+      });
+    });
+
+    describe('API key and tsoa auth', () => {
+      it('returns 200 if API and tsoa auth are correct', () => {
+        const path = '/SecurityTest/OauthAndAPIkey?access_token=abc123456&tsoa=abc123456';
+        return verifyGetRequest(basePath + path, emptyHandler, 200);
+      });
+
+      it('returns 401 if API key is incorrect', () => {
+        const path = '/SecurityTest/OauthAndAPIkey?access_token=abc123456&tsoa=invalid';
+        return verifyGetRequest(basePath + path, emptyHandler, 401);
+      });
+
+      it('returns 401 if tsoa auth is incorrect', () => {
+        const path = '/SecurityTest/OauthAndAPIkey?access_token=invalid&tsoa=abc123456';
+        return verifyGetRequest(basePath + path, emptyHandler, 401);
       });
     });
   });
 
   describe('Parameter data', () => {
     it('parses query parameters', () => {
-      return verifyGetRequest(basePath + '/ParameterTest/Query?firstname=Tony&last_name=Stark&age=45&weight=82.1&human=true&gender=MALE', (err, res) => {
+      return verifyGetRequest(basePath + '/ParameterTest/Query?firstname=Tony&last_name=Stark&age=45&weight=82.1&human=true&gender=MALE&nicknames=Ironman&nicknames=Iron Man', (err, res) => {
         const model = res.body as ParameterTestModel;
         expect(model.firstname).to.equal('Tony');
         expect(model.lastname).to.equal('Stark');
@@ -498,6 +598,7 @@ describe('Express Server', () => {
         expect(model.weight).to.equal(82.1);
         expect(model.human).to.equal(true);
         expect(model.gender).to.equal('MALE');
+        expect(model.nicknames).to.deep.equal(['Ironman', 'Iron Man']);
       });
     });
 

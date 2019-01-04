@@ -1,6 +1,7 @@
 import { expect } from 'chai';
 import 'mocha';
 import { MetadataGenerator } from '../../../../src/metadataGeneration/metadataGenerator';
+import { Tsoa } from '../../../../src/metadataGeneration/tsoa';
 
 describe('Metadata generation', () => {
   const metadata = new MetadataGenerator('./tests/fixtures/controllers/getController.ts').Generate();
@@ -19,7 +20,8 @@ describe('Metadata generation', () => {
     const definedMethods = [
       'getMethod', 'postMethod', 'patchMethod', 'putMethod', 'deleteMethod',
       'description', 'tags', 'multiResponse', 'successResponse', 'oauthOrAPIkeySecurity',
-      'apiSecurity', 'oauthSecurity', 'deprecatedMethod', 'summaryMethod', 'returnAnyType', 'errorResponseExample'];
+      'apiSecurity', 'oauthSecurity', 'deprecatedMethod', 'summaryMethod',
+      'oauthAndAPIkeySecurity', 'returnAnyType'];
 
     it('should generate example for response', () => {
       const method = controller.methods.find(m => m.name === 'errorResponseExample');
@@ -134,6 +136,7 @@ describe('Metadata generation', () => {
       const defaultResponse = method.responses[2];
       expect(defaultResponse.name).to.equal('default');
       expect(defaultResponse.description).to.equal('Unexpected error');
+      expect(defaultResponse.examples).to.deep.equal({ status: 500, message: 'Something went wrong!' });
 
       const successResponse = method.responses[3];
       expect(successResponse.name).to.equal('200');
@@ -158,12 +161,10 @@ describe('Metadata generation', () => {
       if (!method) {
         throw new Error('Method apiSecurity not defined!');
       }
-
       if (!method.security) {
         throw new Error('Security decorator not defined!');
       }
-
-      expect(method.security[0].name).to.equal('api_key');
+      expect(method.security[0].api_key).to.deep.equal([]);
     });
 
     it('should generate oauth2 security', () => {
@@ -171,27 +172,34 @@ describe('Metadata generation', () => {
       if (!method) {
         throw new Error('Method oauthSecurity not defined!');
       }
-
       if (!method.security) {
         throw new Error('Security decorator not defined!');
       }
-      expect(method.security[0].name).to.equal('tsoa_auth');
-      expect(method.security[0].scopes).to.deep.equal(['write:pets', 'read:pets']);
+      expect(method.security[0].tsoa_auth).to.deep.equal(['write:pets', 'read:pets']);
     });
 
-    it('should generate oauth2 and api key security', () => {
-
+    it('should generate oauth2 or api key security', () => {
       const method = controller.methods.find(m => m.name === 'oauthOrAPIkeySecurity');
       if (!method) {
         throw new Error('Method OauthOrAPIkeySecurity not defined!');
       }
-
       if (!method.security) {
         throw new Error('Security decorator not defined!');
       }
-      expect(method.security[0].name).to.equal('tsoa_auth');
-      expect(method.security[0].scopes).to.deep.equal(['write:pets', 'read:pets']);
-      expect(method.security[1].name).to.equal('api_key');
+      expect(method.security[0].tsoa_auth).to.deep.equal(['write:pets', 'read:pets']);
+      expect(method.security[1].api_key).to.deep.equal([]);
+    });
+
+    it('should generate oauth2 and api key security', () => {
+      const method = controller.methods.find(m => m.name === 'oauthAndAPIkeySecurity');
+      if (!method) {
+        throw new Error('Method OauthAndAPIkeySecurity not defined!');
+      }
+      if (!method.security) {
+        throw new Error('Security decorator not defined!');
+      }
+      expect(method.security[0].tsoa_auth).to.deep.equal(['write:pets', 'read:pets']);
+      expect(method.security[0].api_key).to.deep.equal([]);
     });
 
     it('should generate deprecated method true', () => {
@@ -226,13 +234,13 @@ describe('Metadata generation', () => {
     const parameterMetadata = new MetadataGenerator('./tests/fixtures/controllers/parameterController.ts').Generate();
     const controller = parameterMetadata.controllers[0];
 
-    it('should generate an query parameter', () => {
+    it('should generate a query parameter', () => {
       const method = controller.methods.find(m => m.name === 'getQuery');
       if (!method) {
         throw new Error('Method getQuery not defined!');
       }
 
-      expect(method.parameters.length).to.equal(6);
+      expect(method.parameters.length).to.equal(7);
 
       const firstnameParam = method.parameters[0];
       expect(firstnameParam.in).to.equal('query');
@@ -281,6 +289,16 @@ describe('Metadata generation', () => {
       expect(genderParam.description).to.equal('Gender description');
       expect(genderParam.required).to.be.true;
       expect(genderParam.type.dataType).to.equal('enum');
+
+      const nicknamesParam = method.parameters[6] as Tsoa.ArrayParameter;
+      expect(nicknamesParam.in).to.equal('query');
+      expect(nicknamesParam.name).to.equal('nicknames');
+      expect(nicknamesParam.parameterName).to.equal('nicknames');
+      expect(nicknamesParam.description).to.equal('Nicknames description');
+      expect(nicknamesParam.required).to.be.true;
+      expect(nicknamesParam.type.dataType).to.equal('array');
+      expect(nicknamesParam.collectionFormat).to.equal('multi');
+      expect(nicknamesParam.type.elementType).to.deep.equal({ dataType: 'string' });
     });
 
     it('should generate an path parameter', () => {

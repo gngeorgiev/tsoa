@@ -1,7 +1,9 @@
 import * as ts from 'typescript';
 import { getDecorators } from './../utils/decoratorUtils';
 import { GenerateMetadataError } from './exceptions';
+import { MetadataGenerator } from './metadataGenerator';
 import { MethodGenerator } from './methodGenerator';
+import { getSecurities } from './security';
 import { Tsoa } from './tsoa';
 
 export class ControllerGenerator {
@@ -9,7 +11,10 @@ export class ControllerGenerator {
   private readonly tags?: string[];
   private readonly security?: Tsoa.Security[];
 
-  constructor(private readonly node: ts.ClassDeclaration) {
+  constructor(
+    private readonly node: ts.ClassDeclaration,
+    private readonly current: MetadataGenerator,
+    ) {
     this.path = this.getPath();
     this.tags = this.getTags();
     this.security = this.getSecurity();
@@ -40,7 +45,7 @@ export class ControllerGenerator {
   private buildMethods() {
     return this.node.members
       .filter((m) => m.kind === ts.SyntaxKind.MethodDeclaration)
-      .map((m: ts.MethodDeclaration) => new MethodGenerator(m, this.tags, this.security))
+      .map((m: ts.MethodDeclaration) => new MethodGenerator(m, this.current, this.tags, this.security))
       .filter((generator) => generator.IsValid())
       .map((generator) => generator.Generate());
   }
@@ -81,16 +86,6 @@ export class ControllerGenerator {
       return [];
     }
 
-    const security: Tsoa.Security[] = [];
-    for (const sec of securityDecorators) {
-      const expression = sec.parent as ts.CallExpression;
-      security.push({
-        name: (expression.arguments[0] as any).text,
-        scopes: expression.arguments[1] ? (expression.arguments[1] as any).elements.map((e: any) => e.text) : undefined,
-      });
-    }
-
-    return security;
+    return getSecurities(securityDecorators);
   }
-
 }

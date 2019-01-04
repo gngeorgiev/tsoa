@@ -65,6 +65,17 @@ describe('Definition generation', () => {
       expect(property.format).to.equal('password');
     });
 
+    it('should generate an example from a jsdoc comment', () => {
+      const definition = getValidatedDefinition('TestModel');
+      if (!definition.example) { throw new Error('Definition has no example.'); }
+
+      const example = definition.example as any;
+      if (!example) { throw new Error('No json example.'); }
+
+      expect(example.id).to.equal(2);
+      expect(example.modelValue.id).to.equal(3);
+    });
+
     it('should generate properties from extended interface', () => {
       const definition = getValidatedDefinition('TestModel');
       if (!definition.properties) { throw new Error('Definition has no properties.'); }
@@ -83,6 +94,15 @@ describe('Definition generation', () => {
       }
 
       expect(definition.properties.optionalString['x-nullable']).to.equal(true);
+    });
+
+    it('should generate a default value from jsdoc', () => {
+      const definition = getValidatedDefinition('TestModel');
+      if (!definition.properties) {
+        throw new Error('No definition properties.');
+      }
+
+      expect(definition.properties.boolValue.default).to.equal('true');
     });
   });
 
@@ -163,7 +183,7 @@ describe('Definition generation', () => {
       expect(definition.description).to.equal('This is a description of TestClassModel');
     });
 
-    it("should generate a property format from a property jsdoc comment", () => {
+    it('should generate a property format from a property jsdoc comment', () => {
       const propertyName = 'emailPattern';
 
       const property = properties[propertyName];

@@ -4,6 +4,7 @@ import '../controllers/rootController';
 
 import '../controllers/deleteController';
 import '../controllers/getController';
+import '../controllers/headController';
 import '../controllers/patchController';
 import '../controllers/postController';
 import '../controllers/putController';
@@ -29,8 +30,6 @@ app.use(async (context, next) => {
   try {
     await next();
   } catch (err) {
-    // tslint:disable-next-line:no-console
-    console.error(err);
     context.status = err.status || 500;
     context.body = err.message || 'An error occurred during the request.';
   }
